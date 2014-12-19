@@ -10,7 +10,18 @@ First, we load the caret package and read in memory the training dataset.
 
 ```r
 library('caret')
+```
 
+```
+## Warning: package 'caret' was built under R version 3.1.2
+```
+
+```
+## Loading required package: lattice
+## Loading required package: ggplot2
+```
+
+```r
 # read file in
 my.har.training <- read.csv('pml-training.csv',header=TRUE)
 
@@ -99,47 +110,23 @@ Here, we decide to use Random Forests to learn a classifier of barbell form, bec
 ```r
 # split data into training and testing/validation sets
 my.final.training <- createDataPartition(my.clean.training$classe, p=0.75, list=FALSE)
-```
-
-```
-## Error in eval(expr, envir, enclos): could not find function "createDataPartition"
-```
-
-```r
 har.training <- my.clean.training[my.final.training,]
-```
-
-```
-## Error in `[.data.frame`(my.clean.training, my.final.training, ): object 'my.final.training' not found
-```
-
-```r
 har.testing <- my.clean.training[-my.final.training,]
-```
 
-```
-## Error in `[.data.frame`(my.clean.training, -my.final.training, ): object 'my.final.training' not found
-```
-
-```r
 # set a seed for the random number generator for reproducibility of numerical results
 set.seed(123456)
 
 # use 5-fold cross-validation to build the model
 my.ctrl.opt <- trainControl(method = "cv", number = 5)
-```
 
-```
-## Error in eval(expr, envir, enclos): could not find function "trainControl"
-```
-
-```r
 # train model with caret train function
 my.rf.fit <- train(har.training$classe ~ ., method="rf",data=har.training,importance=TRUE,trControl = my.ctrl.opt)
 ```
 
 ```
-## Error in eval(expr, envir, enclos): could not find function "train"
+## Loading required package: randomForest
+## randomForest 4.6-10
+## Type rfNews() to see new features/changes/bug fixes.
 ```
 
 Now, let's examine the model built by this call.
@@ -149,23 +136,96 @@ my.rf.fit$finalModel
 ```
 
 ```
-## Error in eval(expr, envir, enclos): object 'my.rf.fit' not found
+## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry, importance = TRUE) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 2
+## 
+##         OOB estimate of  error rate: 0.64%
+## Confusion matrix:
+##      A    B    C    D    E  class.error
+## A 4183    1    0    0    1 0.0004778973
+## B   15 2824    9    0    0 0.0084269663
+## C    0   17 2548    2    0 0.0074016362
+## D    0    0   37 2371    4 0.0169983416
+## E    0    0    2    6 2698 0.0029563932
 ```
 
 
+
+We had 500 trees in the model. The random forest produces an OOB estimate of error rate of 0.6386737 %, corresponding to an OOB accuracy of 99.3613263%. However, to get an estimate of the **real** error of the model, we use the testing/validation sample that we obtained by partitionning the data pre-training of the model, and whose real class labels are known.
+
+
+```r
+# predict on the partionned testing/validation data
+my.rf.preds <- predict(my.rf.fit, har.testing)
+my.confus.mat <- confusionMatrix(har.testing$classe, my.rf.preds)
+my.confus.mat
 ```
-## Error in eval(expr, envir, enclos): object 'my.rf.fit' not found
-```
 
 ```
-## Error in eval(expr, envir, enclos): object 'my.err' not found
+## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1393    2    0    0    0
+##          B    2  947    0    0    0
+##          C    0    7  848    0    0
+##          D    0    0   17  787    0
+##          E    0    0    0    1  900
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9941         
+##                  95% CI : (0.9915, 0.996)
+##     No Information Rate : 0.2845         
+##     P-Value [Acc > NIR] : < 2.2e-16      
+##                                          
+##                   Kappa : 0.9925         
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9986   0.9906   0.9803   0.9987   1.0000
+## Specificity            0.9994   0.9995   0.9983   0.9959   0.9998
+## Pos Pred Value         0.9986   0.9979   0.9918   0.9789   0.9989
+## Neg Pred Value         0.9994   0.9977   0.9958   0.9998   1.0000
+## Prevalence             0.2845   0.1949   0.1764   0.1607   0.1835
+## Detection Rate         0.2841   0.1931   0.1729   0.1605   0.1835
+## Detection Prevalence   0.2845   0.1935   0.1743   0.1639   0.1837
+## Balanced Accuracy      0.9990   0.9950   0.9893   0.9973   0.9999
 ```
 
 
 
+Using data that was not used to build the model, we find an out-of-sample accuracy of 99.408646%. Thus it seems that we have built a high performance model, with high accuracy that is validated even using data that was not included in the training phase.
+
+We can also examine variable importance to see which variables contributed most to the final model:
+
+```r
+varImpPlot(my.rf.fit$finalModel, sort = TRUE, type = 1, pch = 16, bg = "red", cex = 1, main = "Variable importance in model")
+```
+
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
+
+## Prediction on the unknown testing data
+Now that we know that our model performs reasonnably well, we can use it to predict the class labels of the unknown samples provided in the assignment: we use our model on the provided 'test' dataset, which is processed similarly to our training set, and output the required files.
 
 
+```r
+my.har.testing <- read.csv('pml-testing.csv',header=TRUE)
 
+# Select the same variables than in the training phase
+my.clean.testing <- data.frame(my.har.testing[,-c(which(my.notUsable))])
+my.clean.testing <- my.clean.testing[,-(1:7)]
 
+# run predictions
+my.test.preds <- as.character(predict(my.rf.fit, my.clean.testing))
+# we don't show the results of these predictions here to adhere with the Coursera code of honor.
+```
 
-
+## Conclusion
+We used Random Forests on accelerometer data to attempt to build a predictive model of whether wearers were using good form or not while lifting a barbell. Our model performed well in term of OOB accuracy, but also according to an out-of-sample validation set whose class labels (i.e. form while lifting the barbell) were already know. Finally, it seems that the model performs rather well also on unlabeled data in a 3rd independent dataset provided for prediction, since according to the automatic grading, the predicted labels were all correct.

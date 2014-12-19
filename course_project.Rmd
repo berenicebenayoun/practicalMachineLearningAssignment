@@ -100,7 +100,6 @@ We can also examine variable importance to see which variables contributed most 
 ```{r,echo = TRUE}
 varImpPlot(my.rf.fit$finalModel, sort = TRUE, type = 1, pch = 16, bg = "red", cex = 1, main = "Variable importance in model")
 ```
-It thus seems that the tracker of dumbell movement was the most important feature in this model.
 
 ## Prediction on the unknown testing data
 Now that we know that our model performs reasonnably well, we can use it to predict the class labels of the unknown samples provided in the assignment: we use our model on the provided 'test' dataset, which is processed similarly to our training set, and output the required files.
