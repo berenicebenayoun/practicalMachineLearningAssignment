@@ -110,20 +110,11 @@ my.har.testing <- read.csv('pml-testing.csv',header=TRUE)
 
 # Select the same variables than in the training phase
 my.clean.testing <- data.frame(my.har.testing[,-c(which(my.notUsable))])
-my.clean.testing <- my.clean.testing[,-(1:5)]
+my.clean.testing <- my.clean.testing[,-(1:7)]
 
 # run predictions
 my.test.preds <- as.character(predict(my.rf.fit, my.clean.testing))
-
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("problem_id_",i,".txt")
-    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-  }
-}
-
-pml_write_files(my.test.preds)
+# we don't show the results of these predictions here to adhere with the Coursera code of honor.
 ```
 
 ## Conclusion
